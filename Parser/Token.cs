@@ -1,4 +1,4 @@
-namespace PSI;
+﻿namespace PSI;
 using static Token.E;
 
 // Represents a PSI language Token
@@ -38,9 +38,28 @@ public class Token {
    // Utility function used to echo an error to the console
    public void PrintError () {
       if (Kind != ERROR) throw new Exception ("PrintError called on a non-error token");
+      string title = $"File: {Source.FileName}";
+      var headLine = string.Concat (Enumerable.Repeat ("_", 18));
+      const int idxLength = 3;
+      Console.WriteLine (title);
+      Console.WriteLine (headLine);
+      var start = Line > 2 ? Line - 3: Line - 1;
+      for (int i = start; i < Line; i++)
+            Console.WriteLine ($" {i,3}│{Source.Lines[i]}");
       Console.ForegroundColor = ConsoleColor.Yellow;
-      Console.WriteLine ($"At line {Line}, column {Column} of {Source.FileName}: {Text}");
+      var pos = Console.GetCursorPosition ();
+      Console.SetCursorPosition (Column + 4, pos.Top);
+      Console.WriteLine ("^");
+      Console.SetCursorPosition (Column - 2, pos.Top);
+      Console.WriteLine ($"{Text}");
       Console.ResetColor ();
+      var end = Line > Source.Lines.Length - 2 ? Source.Lines.Length - 1 : Line + 2;
+      var wid = Source.Lines[start..end].Max (a => a.Length);
+      wid = (wid - Column) < 10 ? wid + 11 : wid + 4;
+      Console.WindowWidth = wid;
+      for (int i = Line; i < end; i++)
+         Console.WriteLine ($" {i,idxLength}│{Source.Lines[i]}");
+
    }
 
    // Helper used by the parser (maps operator sequences to E values)
