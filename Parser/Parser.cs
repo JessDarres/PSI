@@ -31,9 +31,14 @@ public class Parser {
    // declarations = [var-decls] [procfn-decls] .
    NDeclarations Declarations () {
       List<NVarDecl> vars = new ();
-      if (Match (VAR)) 
+      List<NFuncDecl> functions = new ();
+      if (Match (VAR)) {
          do { vars.AddRange (VarDecls ()); Expect (SEMI); } while (Peek (IDENT));
-      return new (vars.ToArray ());
+      }
+      while (Match (FUNCTION, PROCEDURE)) {
+         functions.Add (FuncProcDecls (Prev.Kind));
+      }
+      return new (vars.ToArray (), functions.ToArray ());
    }
 
    // ident-list = IDENT { "," IDENT }
@@ -47,6 +52,23 @@ public class Parser {
    NVarDecl[] VarDecls () {
       var names = IdentList (); Expect (COLON); var type = Type ();
       return names.Select (a => new NVarDecl (a, type)).ToArray ();
+   }
+
+   // "function" IDENT paramlist ":" type; block ";" .
+   // "procedure" IDENT paramlist; block ";" .
+   NFuncDecl FuncProcDecls (Token.E prev) {
+      var name = Expect (IDENT);
+      Expect (OPEN);
+      var variables = VarDecls ();
+      Expect (CLOSE);
+      var retType = NType.Unknown;
+      if (prev == FUNCTION) {
+         Expect (COLON);
+         retType = Type ();
+         Expect (SEMI);
+      }
+      var block = Block ();
+      return new NFuncDecl (name, variables, retType, block);
    }
 
    // type = integer | real | boolean | string | char

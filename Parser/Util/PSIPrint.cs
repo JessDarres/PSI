@@ -20,6 +20,7 @@ public class PSIPrint : Visitor<StringBuilder> {
             NWrite ($"{g.Select (a => a.Name).ToCSV ()} : {g.Key};");
          N--;
       }
+      d.functions.ForEach (f => f.Accept (this));
       return S;
    }
 
@@ -81,6 +82,23 @@ public class PSIPrint : Visitor<StringBuilder> {
       Console.Write (txt);
       S.Append (txt);
       return S;
+   }
+
+   public override StringBuilder Visit (NFuncDecl f) {
+      bool isProc = f.RetType == NType.Void;
+      NWrite (isProc ? "procedure " : "function ");
+      Write ($"{f.Name.Text} (");
+      var pars = f.Params.GroupBy (a => a.Type).ToList ();
+      foreach (var par in pars) {
+         var comma = par.Count () > 1 ? "," : "";
+         foreach (var v in par)
+            Write ($"{v.Name.Text}{comma}");
+         Write ($": {par.Key}");
+      }
+      Write (")");
+      if (!isProc) Write ($": {f.RetType}");
+      Write (";");
+      return Visit (f.Block);
    }
 
    readonly StringBuilder S = new ();
