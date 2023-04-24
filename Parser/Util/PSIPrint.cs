@@ -1,6 +1,8 @@
 ﻿// ⓅⓈⒾ  ●  Pascal Language System  ●  Academy'23
 // PSIPrint.cs ~ Prints a PSI syntax tree in Pascal format
 // ─────────────────────────────────────────────────────────────────────────────
+using System.Linq.Expressions;
+
 namespace PSI;
 
 public class PSIPrint : Visitor<StringBuilder> {
@@ -41,6 +43,42 @@ public class PSIPrint : Visitor<StringBuilder> {
          w.Exprs[i].Accept (this);
       }
       return Write (");");
+   }
+
+   public override StringBuilder Visit (NReadStmt r) {
+      NWrite ("Read (");
+      Write (r.Names[0].Text);
+      if (r.Names.Length > 0) {
+         for (int i = 1; i < r.Names.Length; i++) {
+            Write(","); Write (r.Names[i].Text);
+         }
+      }
+      return Write (");");
+   }
+
+   public override StringBuilder Visit (NIfStmt i) {
+      NWrite ("if ");
+      i.Expr.Accept (this);
+      Write (" then ");
+      N++;
+      Visit (i.IF);
+      N--;
+      if (i.ELSE != null) {
+         NWrite ("else ");
+         Visit (i.ELSE);
+      }
+      return S;
+   }
+
+
+   public override StringBuilder Visit (NWhileStmt w) {
+      NWrite ("while ");
+      w.Expr.Accept (this);
+      Write (" do ");
+      N++;
+      Visit (w.Body);
+      N--;
+      return S;
    }
 
    public override StringBuilder Visit (NLiteral t)

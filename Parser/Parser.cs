@@ -68,6 +68,9 @@ public class Parser {
       if (Match (IDENT)) {
          if (Match (ASSIGN)) return AssignStmt ();
       }
+      if (Match (READ)) return ReadStmt ();
+      if (Match (IF)) return IfStmt ();
+      if (Match (WHILE)) return WhileStmt ();
       Unexpected ();
       return null!;
    }
@@ -87,6 +90,35 @@ public class Parser {
    // assign-stmt = IDENT ":=" expr .
    NAssignStmt AssignStmt () 
       => new (PrevPrev, Expression ());
+
+   // "read" "(" identlist ")" ";"
+   NReadStmt ReadStmt () {
+      Expect (OPEN);
+      var names = new List<Token> ();
+      if (!Peek (CLOSE)) names.Add (Expect (IDENT));
+      while (Match (COMMA)) names.Add (Expect (IDENT));
+      Expect (CLOSE);
+      Expect (SEMI);
+      return new (names.ToArray ());
+   }
+
+   // "if" expression "then" statement [ "else" statement ] .
+   NIfStmt IfStmt () {
+      var expr = Expression ();
+      Expect (THEN);
+      var ifStmt = Stmt ();
+      NStmt? elseStmt = null;
+      if (Match (ELSE)) elseStmt = Stmt ();
+      return new NIfStmt (ifStmt, expr, elseStmt);
+   }
+
+   // "while" expression "do" statement .
+   NWhileStmt WhileStmt () {
+      var expr = Expression ();
+      Expect (DO);
+      var stmt = Stmt ();
+      return new (expr, stmt);
+   }
    #endregion
 
    #region Expression --------------------------------------

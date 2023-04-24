@@ -13,6 +13,9 @@ public abstract class Visitor<T> {
    public abstract T Visit (NCompoundStmt b);
    public abstract T Visit (NAssignStmt a);
    public abstract T Visit (NWriteStmt w);
+   public abstract T Visit (NReadStmt r);
+   public abstract T Visit (NIfStmt i);
+   public abstract T Visit (NWhileStmt w);
 
    public abstract T Visit (NLiteral t);
    public abstract T Visit (NIdentifier d);
