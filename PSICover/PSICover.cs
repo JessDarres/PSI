@@ -1,5 +1,6 @@
 ﻿namespace PSICover;
 using System.Diagnostics;
+using System.Text;
 using System.Text.RegularExpressions;
 
 // The CoverageAnalyzer for .Net
@@ -200,9 +201,9 @@ class Analyzer {
       int cBlocks = mBlocks.Count, cHit = hits.Count (a => a > 0);
       double percent = Math.Round (100.0 * cHit / cBlocks, 1);
       Console.WriteLine ($"Coverage: {cHit}/{cBlocks}, {percent}%");
-      string tableContent = "<tr>\r\n <th>FileName</th>\r\n <th>Blocks</th>\r\n <th>Hits</th>\r\n <th>Coverage (%)</th>\r\n</tr>\r\n\r\n";
+      var tc = new StringBuilder ("<tr>\r\n <th>FileName</th>\r\n <th>Blocks</th>\r\n <th>Hits</th>\r\n <th>Coverage (%)</th>\r\n</tr>\r\n\r\n");
       foreach (var f in codeSummary.OrderBy (x => x.Coverage)) {
-         tableContent += $"<tr>\n <td>{Path.GetFileNameWithoutExtension (f.Filename)}</td>\n <td>{f.Blocks}</td>\n <td>{f.Hits}</td>\n <td>{f.Coverage}</td>\n</tr>";
+         tc.Append ($"<tr>\n <td>{Path.GetFileNameWithoutExtension (f.Filename)}</td>\n <td>{f.Blocks}</td>\n <td>{f.Hits}</td>\n <td>{f.Coverage}</td>\n</tr>");
       }
       string summaryFile = $"{Dir}/HTML/CodeSummary.html";
       string summaryHtml = $$"""
@@ -233,7 +234,7 @@ class Analyzer {
             <body>
             <h1>PSI code coverage</h1>
             <table>
-            {{tableContent}}
+            {{tc}}
             </table>
             </body>
             </html>
