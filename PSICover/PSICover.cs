@@ -1,5 +1,6 @@
 ﻿namespace PSICover;
 using System.Diagnostics;
+using System.Text;
 using System.Text.RegularExpressions;
 
 // The CoverageAnalyzer for .Net
@@ -150,6 +151,8 @@ class Analyzer {
    void GenerateOutputs () {
       ulong[] hits = File.ReadAllLines ($"{Dir}/hits.txt").Select (ulong.Parse).ToArray ();
       var files = mBlocks.Select (a => a.File).Distinct ().ToArray ();
+      var codeSummary = new List<(string Filename, int Blocks, int Hits, double Coverage)> ();
+
       foreach (var file in files) {
          var blocks = mBlocks.Where (a => a.File == file)
                              .OrderBy (a => a.SPosition)
@@ -163,11 +166,21 @@ class Analyzer {
          var code = File.ReadAllLines (file);
          for (int i = 0; i < code.Length; i++)
             code[i] = code[i].Replace ('<', '\u00ab').Replace ('>', '\u00bb');
+         int hitCount = 0;
          foreach (var block in blocks) {
             bool hit = hits[block.Id] > 0;
-            string tag = $"<span class=\"{(hit ? "hit" : "unhit")}\">";
-            code[block.ELine] = code[block.ELine].Insert (block.ECol, "</span>");
-            code[block.SLine] = code[block.SLine].Insert (block.SCol, tag);
+            if (hit) hitCount++;
+            string title = hit ? $"title=\"{hits[block.Id]} hits" : "";
+            string tag = $"<span class=\"{(hit ? "hit" : "unhit")}\" {title}\">";
+            if (block.ELine != block.SLine) {
+               for (int i = block.ELine; i >= block.SLine; i--) {
+                  var line = code[i].Insert (code[i].IndexOf (code[i].FirstOrDefault (x => !char.IsWhiteSpace (x))), tag);
+                  code[i] = $"{line} </span>";
+               }
+            } else {
+               code[block.ELine] = code[block.ELine].Insert (block.ECol, "</span>");
+               code[block.SLine] = code[block.SLine].Insert (block.SCol, tag);
+            }
          }
          string htmlfile = $"{Dir}/HTML/{Path.GetFileNameWithoutExtension (file)}.html";
 
@@ -182,10 +195,51 @@ class Analyzer {
             """;
          html = html.Replace ("\u00ab", "&lt;").Replace ("\u00bb", "&gt;");
          File.WriteAllText (htmlfile, html);
+         double coverage = Math.Round (100.0 * hitCount / blocks.Count, 1);
+         codeSummary.Add (new (file, blocks.Count, hitCount, coverage));
       }
       int cBlocks = mBlocks.Count, cHit = hits.Count (a => a > 0);
       double percent = Math.Round (100.0 * cHit / cBlocks, 1);
       Console.WriteLine ($"Coverage: {cHit}/{cBlocks}, {percent}%");
+      var tc = new StringBuilder ("<tr>\r\n <th>FileName</th>\r\n <th>Blocks</th>\r\n <th>Hits</th>\r\n <th>Coverage (%)</th>\r\n</tr>\r\n\r\n");
+      foreach (var f in codeSummary.OrderBy (x => x.Coverage)) {
+         tc.Append ($"<tr>\n <td>{Path.GetFileNameWithoutExtension (f.Filename)}</td>\n <td>{f.Blocks}</td>\n <td>{f.Hits}</td>\n <td>{f.Coverage}</td>\n</tr>");
+      }
+      string summaryFile = $"{Dir}/HTML/CodeSummary.html";
+      string summaryHtml = $$"""
+            <html>
+            <head>
+            <style>
+            table {
+              font-family: arial;
+              border-collapse: collapse;
+              width: 100%;
+            }
+
+            td {
+              border: 1px solid #dddddd;
+              text-align: left;
+              padding: 8px;
+            }
+
+            th {
+              border: 1px solid #dddddd;
+              text-align: left;
+              padding: 8px;
+              font-size:150%
+            }
+            </style>
+            <title>PSI code coverage</title>
+            </head>
+            <body>
+            <h1>PSI code coverage</h1>
+            <table>
+            {{tc}}
+            </table>
+            </body>
+            </html>
+            """;
+      File.WriteAllText (summaryFile, summaryHtml);
    }
 
    // Restore the DLLs and PDBs from the backups
