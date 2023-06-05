@@ -83,7 +83,30 @@ public class ILCodeGen : Visitor {
          Out ($"  {lab2}:");
       }
    }
-   public override void Visit (NForStmt f) => throw new NotImplementedException ();
+   public override void Visit (NForStmt f) {
+      f.Start.Accept (this);
+      StoreVar (f.Var);
+      string lab1 = NextLabel (), lab2 = NextLabel ();
+      Out ($"    br {lab2}");
+      Out ($"  {lab1}:");
+      f.Body.Accept (this);
+      LoadIdentifier ();
+      Out ("    ldc.i4.1");
+      Out (f.Ascending ? "    add" : "    sub");
+      StoreVar (f.Var);
+      Out ($"  {lab2}:");
+      LoadIdentifier ();
+      f.End.Accept (this);
+      Out (f.Ascending ? "    cgt" : "    clt");
+      Out ($"    brtrue {lab1}");
+
+      void LoadIdentifier () {
+         if (mSymbols.Find (f.Var) is NVarDecl varDecl) {
+            if (varDecl.Local) Out ($"    ldloc {varDecl.Name}");
+            else Out ($"    ldsfld {TMap[varDecl.Type]} Program::{varDecl.Name}");
+         }
+      }
+   }
    public override void Visit (NReadStmt r) => throw new NotImplementedException ();
 
    public override void Visit (NWhileStmt w) {
